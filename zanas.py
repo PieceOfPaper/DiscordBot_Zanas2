@@ -89,24 +89,45 @@ class ZanasClient(discord.Client):
         await self.wait_until_ready()
         path = 'C:\\Nexon\\TreeOfSavior\\release\\screenshot\\'
         while not self.is_closed():
+            # rename
+            for filename in os.listdir(path):
+                if filename.startswith('recchat_'):
+                    os.rename(path + filename, path + 'check_' + filename)
+                    break
+            await asyncio.sleep(0.3)
+
+            # read chat
             for filename in os.listdir(path):
                 if filename.startswith('check_recchat_'):
                     f = open(path + filename, 'r', encoding='UTF8')
                     lines = f.readlines()
-                    for line in lines:
-                        splited = line.split(' ')
-                        text = line.split(splited[2])[1]
-                        print(text[:-1])
-                        if splited[2] == '[Notice]':
-                            for guildKey in self.guildDatas:
-                                if self.guildDatas[guildKey].channel_id > 0:
-                                    await client.get_channel(self.guildDatas[guildKey].channel_id).send(text[:-1])
-
                     f.close()
                     os.remove(path + filename)
-                elif filename.startswith('recchat_'):
-                    os.rename(path + filename, path + 'check_' + filename)
-            await asyncio.sleep(1)
+
+                    for line in lines:
+                        splited = line.split(' ')
+                        text = line.split(splited[2])[1][:-1]
+
+                        print(line[:-1])
+
+                        result = None
+                        if 'FieldBossWillAppear' in text:
+                            bossname = text.replace('!@#$FieldBossWillAppear$*$Name$*$','').replace('#@!','')
+                            result = f'잠시 후 필드보스가 등장합니다. {bossname.strip()}'
+                        elif 'NOTICE_READY_FIELDBOSS_WORLD_EVENT' in text:
+                            result = f'월드 보스가 구원자들에 의해 쓰러졌습니다.'
+                        elif 'NOTICE_START_FIELDBOSS_WORLD_EVENT' in text:
+                            result = f'여신의 가호 이벤트가 시작되었습니다!'
+                        elif 'System' in line:
+                            result = text
+                        
+                        if result is not None:
+                            print(result)
+                            for guildKey in self.guildDatas:
+                                if self.guildDatas[guildKey].channel_id > 0:
+                                    await client.get_channel(self.guildDatas[guildKey].channel_id).send(result)
+
+            await asyncio.sleep(0.3)
 
 
 client = ZanasClient()
