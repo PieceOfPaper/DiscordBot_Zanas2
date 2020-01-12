@@ -91,12 +91,92 @@ class ZanasClient(discord.Client):
                     print(f'channel: {message.channel.name}({message.channel.id})')
                     print(f'guild: {message.guild.name}({message.guild.id})')
                     await message.channel.send('print debug.')
-                elif args[0] == './채팅자나스 채널':
-                    self.guildDatas[message.guild.id].channel_id = message.channel.id
-                    await message.channel.send(f'<#{message.channel.id}> 채널에 알림 등록.')
-                elif args[0] == './채팅자나스 채널길드':
-                    self.guildDatas[message.guild.id].channel_id_guild = message.channel.id
-                    await message.channel.send(f'<#{message.channel.id}> 채널에 길드 알림 등록.')
+                elif args[0] == './채팅자나스':
+                    if len(args) > 1:
+                        if args[1] == '채널':
+                            self.guildDatas[message.guild.id].channel_id = message.channel.id
+                            await message.channel.send(f'<#{message.channel.id}> 채널에 알림 등록.')
+                        elif args[1] == '채널길드':
+                            self.guildDatas[message.guild.id].channel_id_guild = message.channel.id
+                            await message.channel.send(f'<#{message.channel.id}> 채널에 길드 알림 등록.')
+                        else:
+                            await self.check_chat(message.content.replace('./채팅자나스 ',''))
+
+    async def check_chat(self, text):
+        # print(text)
+        result = None
+        resulttype = 0
+        if 'FieldBossWillAppear' in text:
+            resulttype = 1
+            bossname = text.replace('System:!@#$FieldBossWillAppear$*$Name$*$','').replace('#@!','')
+            result = f'잠시 후 필드보스가 등장합니다. {bossname.strip()}'
+        elif 'NOTICE_READY_FIELDBOSS_WORLD_EVENT' in text:
+            resulttype = 1
+            result = f'월드 보스가 구원자들에 의해 쓰러졌습니다.'
+        elif 'NOTICE_START_FIELDBOSS_WORLD_EVENT' in text:
+            resulttype = 1
+            result = f'여신의 가호 이벤트가 시작되었습니다!'
+        elif 'FIELDBOSS_WORLD_EVENT_WIN_MSG' in text:
+            resulttype = 0
+        elif 'ContentRatingMsg' in text:
+            resulttype = 0
+        elif 'DelibarationMsg1' in text:
+            resulttype = 0
+        elif 'DelibarationMsg2' in text:
+            resulttype = 0
+        elif 'SOLO_RAID_NEW_RECORD' in text:
+            resulttype = 0
+        elif 'Guild_Event_boruta_Awards_WorldMessage_1' in text:
+            resulttype = 0
+        elif 'Guild_Event_boruta_Awards_WorldMessage_2' in text:
+            resulttype = 0
+        elif 'Guild_Event_boruta_Awards_WorldMessage_3' in text:
+            resulttype = 0
+        elif 'Guild_Event_boruta_Awards_WorldMessage_4' in text:
+            resulttype = 0
+        elif 'NOTICE_END_FIELDBOSS_WORLD_EVENT' in text:
+            resulttype = 0
+        elif 'Guild_Colony_Live_End_WorldMessage_1' in text:
+            resulttype = 0
+        elif 'Guild_Colony_Live_End_WorldMessage_2' in text:
+            resulttype = 0
+        elif 'Guild_Colony_End_WorldMessage_' in text:
+            resulttype = 0
+        elif 'pvp_mine_before_' in text:
+            resulttype = 0
+        elif 'pvp_mine_2nd_before_' in text:
+            resulttype = 0
+        elif 'Guild_Event_boruta_Awards_WorldMessage_Rank_' in text:
+            resulttype = 2
+            ranking = text.replace('System:!@#$Guild_Event_boruta_Awards_WorldMessage_Rank_','').split('$*$partyName$*$')[0]
+            guildnametime = text.replace(f'System:!@#$Guild_Event_boruta_Awards_WorldMessage_Rank_{ranking}$*$partyName$*$','').replace('$*$TimeRankMin$*$','/').replace('$*$TimeRankSec$*$','/').replace('#@!','')
+            guildtime_splited = guildnametime.split('/')
+            result = f'보루타 {ranking}위: {guildtime_splited[0].strip()} ({guildtime_splited[1].strip()}분 {guildtime_splited[2].strip()}초)'
+        elif 'Guild_Colony_Occupation_WorldMessage' in text:
+            resulttype = 2
+            guildnamemap = text.replace('System:!@#$Guild_Colony_Occupation_WorldMessage$*$partyName$*$','').replace('#@!','').split('$*$mapName$*$')
+            result = f'[{guildnamemap[0].strip()}] 길드가 [{guildnamemap[1].strip()}] 점령에 성공했습니다.\n'
+            self.colonyGuilds[guildnamemap[1].replace(' 지역','').strip()] = guildnamemap[0].strip()
+            result += '```'
+            for colonyKey in self.colonyGuilds:
+                result += f'{colonyKey}\t:{self.colonyGuilds[colonyKey]}\n'
+            result += '```'
+        elif 'CantConnectChatServer' in text:
+            resulttype = 0
+            print('클라이언트 재시작 필요.')
+        elif text.startswith('System:'):
+            resulttype = 0
+            result = text
+                        
+        if resulttype == 1:
+            for guildKey in self.guildDatas:
+                if self.guildDatas[guildKey].channel_id > 0:
+                    await client.get_channel(self.guildDatas[guildKey].channel_id).send(result)
+        elif resulttype == 2:
+            for guildKey in self.guildDatas:
+                if self.guildDatas[guildKey].channel_id_guild > 0:
+                    await client.get_channel(self.guildDatas[guildKey].channel_id_guild).send(result)
+
             
     async def my_background_task(self):
         await self.wait_until_ready()
@@ -142,76 +222,7 @@ class ZanasClient(discord.Client):
                             continue
                         text = splited2[1][:-1]
 
-                        result = None
-                        resulttype = 0
-                        if 'FieldBossWillAppear' in text:
-                            resulttype = 1
-                            bossname = text.replace('System:!@#$FieldBossWillAppear$*$Name$*$','').replace('#@!','')
-                            result = f'잠시 후 필드보스가 등장합니다. {bossname.strip()}'
-                        elif 'NOTICE_READY_FIELDBOSS_WORLD_EVENT' in text:
-                            resulttype = 1
-                            result = f'월드 보스가 구원자들에 의해 쓰러졌습니다.'
-                        elif 'NOTICE_START_FIELDBOSS_WORLD_EVENT' in text:
-                            resulttype = 1
-                            result = f'여신의 가호 이벤트가 시작되었습니다!'
-                        elif 'ContentRatingMsg' in text:
-                            resulttype = 0
-                        elif 'DelibarationMsg1' in text:
-                            resulttype = 0
-                        elif 'DelibarationMsg2' in text:
-                            resulttype = 0
-                        elif 'SOLO_RAID_NEW_RECORD' in text:
-                            resulttype = 0
-                        elif 'Guild_Event_boruta_Awards_WorldMessage_1' in text:
-                            resulttype = 0
-                        elif 'Guild_Event_boruta_Awards_WorldMessage_2' in text:
-                            resulttype = 0
-                        elif 'Guild_Event_boruta_Awards_WorldMessage_3' in text:
-                            resulttype = 0
-                        elif 'Guild_Event_boruta_Awards_WorldMessage_4' in text:
-                            resulttype = 0
-                        elif 'NOTICE_END_FIELDBOSS_WORLD_EVENT' in text:
-                            resulttype = 0
-                        elif 'Guild_Colony_Live_End_WorldMessage_1' in text:
-                            resulttype = 0
-                        elif 'Guild_Colony_Live_End_WorldMessage_2' in text:
-                            resulttype = 0
-                        elif 'Guild_Colony_End_WorldMessage_' in text:
-                            resulttype = 0
-                        elif 'pvp_mine_before_' in text:
-                            resulttype = 0
-                        elif 'pvp_mine_2nd_before_' in text:
-                            resulttype = 0
-                        elif 'Guild_Event_boruta_Awards_WorldMessage_Rank_' in text:
-                            resulttype = 2
-                            ranking = text.replace('System:!@#$Guild_Event_boruta_Awards_WorldMessage_Rank_','').split('$$partyName$$')[0]
-                            guildnametime = text.replace(f'System:!@#$Guild_Event_boruta_Awards_WorldMessage_Rank_{ranking}$$partyName$$','').replace('$$TimeRankMin$$','/').replace('$$TimeRankSec$$','/').replace('#@!','')
-                            guildtime_splited = guildnametime.split('/')
-                            result = f'보루타 {ranking}위: {guildtime_splited[0].strip()} ({guildtime_splited[1].strip()}분 {guildtime_splited[2].strip()}초)'
-                        elif 'Guild_Colony_Occupation_WorldMessage' in text:
-                            resulttype = 2
-                            guildnamemap = text.replace('System:!@#$Guild_Colony_Occupation_WorldMessage$$partyName$$','').replace('#@!','').split('$$mapName$$')
-                            result = f'[{guildnamemap[0].strip()}] 길드가 [{guildnamemap[1].strip()}] 점령에 성공했습니다.\n'
-                            self.colonyGuilds[guildnamemap[1].replace(' 지역','').strip()] = guildnamemap[0].strip()
-                            result += '```'
-                            for colonyKey in self.colonyGuilds:
-                                result += f'{colonyKey}\t:{self.colonyGuilds[colonyKey]}\n'
-                            result += '```'
-                        elif 'CantConnectChatServer' in text:
-                            resulttype = 0
-                            print('클라이언트 재시작 필요.')
-                        elif splited[2] == '[System]':
-                            resulttype = 0
-                            result = text
-                        
-                        if resulttype == 1:
-                            for guildKey in self.guildDatas:
-                                if self.guildDatas[guildKey].channel_id > 0:
-                                    await client.get_channel(self.guildDatas[guildKey].channel_id).send(result)
-                        elif resulttype == 2:
-                            for guildKey in self.guildDatas:
-                                if self.guildDatas[guildKey].channel_id_guild > 0:
-                                    await client.get_channel(self.guildDatas[guildKey].channel_id_guild).send(result)
+                        await self.check_chat(text)
             await asyncio.sleep(3)
 
 
