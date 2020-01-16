@@ -12,6 +12,33 @@ for argIdx, argVal in enumerate(sys.argv):
         token = sys.argv[argIdx + 1]
 
 
+shout_keyworks = ['자나스']
+shout_keyworks.append('전설')
+shout_keyworks.append('바이보라')
+shout_keyworks.append('길드')
+
+# 거래 관련
+shout_keyworks.append('석')
+shout_keyworks.append('팜')
+shout_keyworks.append('삼')
+shout_keyworks.append('ㅍ')
+shout_keyworks.append('ㅅ')
+shout_keyworks.append('실버')
+shout_keyworks.append('개당')
+shout_keyworks.append('파라')
+shout_keyworks.append('팔아')
+shout_keyworks.append('팝니')
+shout_keyworks.append('파시')
+shout_keyworks.append('사요')
+shout_keyworks.append('사영')
+shout_keyworks.append('사용')
+shout_keyworks.append('사욤')
+shout_keyworks.append('삽니')
+shout_keyworks.append('사봅')
+shout_keyworks.append('사봄')
+shout_keyworks.append('사시')
+shout_keyworks.append('교환')
+
 class GuildData:
     id = 0
     tzinfo = None
@@ -22,9 +49,6 @@ class GuildData:
     def __init__(self, id):
         self.id = id
         self.tzinfo = datetime.timezone(datetime.timedelta(hours=0))
-
-    
-
 
 class ZanasClient(discord.Client):
 
@@ -101,10 +125,12 @@ class ZanasClient(discord.Client):
                             self.guildDatas[message.guild.id].channel_id_guild = message.channel.id
                             print(f'guild:{message.guild.id} channel:{message.channel.id}')
                             await message.channel.send(f'<#{message.channel.id}> 채널에 길드 알림 등록.')
-                        else:
-                            await self.check_chat(message.content.replace('./채팅자나스 ',''))
+                elif args[0] == './채팅시스템':
+                    await self.check_systemchat(message.content.replace('./채팅시스템 ',''))
+                elif args[0] == './채팅외침':
+                    await self.check_shoutchat(message.content.replace('./채팅외침 ',''))
 
-    async def check_chat(self, text):
+    async def check_systemchat(self, text):
         # print(text)
         result = None
         resulttype = 0
@@ -170,6 +196,7 @@ class ZanasClient(discord.Client):
         elif text.startswith('System:'):
             resulttype = 0
             result = text
+            print(text)
                         
         if resulttype == 1:
             for guildKey in self.guildDatas:
@@ -179,6 +206,29 @@ class ZanasClient(discord.Client):
             for guildKey in self.guildDatas:
                 if self.guildDatas[guildKey].channel_id_guild > 0:
                     await client.get_channel(self.guildDatas[guildKey].channel_id_guild).send(result)
+
+    async def check_shoutchat(self, text):
+        # print(text)
+        nickname = text.split(':')[0]
+        mention = text.replace(f'{nickname}:','')
+        result = None
+        resulttype = 0
+        for keyword in shout_keyworks:
+            if keyword in mention:
+                result = f':loudspeaker: **{nickname}** : `{mention}`'
+                resulttype = 1
+            if result is not None:
+                break
+
+        if resulttype == 1:
+            for guildKey in self.guildDatas:
+                if self.guildDatas[guildKey].channel_id > 0:
+                    await client.get_channel(self.guildDatas[guildKey].channel_id).send(result)
+        elif resulttype == 2:
+            for guildKey in self.guildDatas:
+                if self.guildDatas[guildKey].channel_id_guild > 0:
+                    await client.get_channel(self.guildDatas[guildKey].channel_id_guild).send(result)
+
 
             
     async def my_background_task(self):
@@ -198,7 +248,7 @@ class ZanasClient(discord.Client):
                         print(f'rename error - {e}')
                         isError = True
                         break
-            await asyncio.sleep(3)
+            await asyncio.sleep(2)
 
             if isError:
                 continue
@@ -225,8 +275,12 @@ class ZanasClient(discord.Client):
                             continue
                         text = splited2[1][:-1]
 
-                        await self.check_chat(text)
-            await asyncio.sleep(3)
+                        if 'System' in splited[2]:
+                            await self.check_systemchat(text)
+                        elif 'Shout' in splited[2]:
+                            await self.check_shoutchat(text)
+
+            await asyncio.sleep(2)
 
 
 client = ZanasClient()
